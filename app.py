@@ -22,8 +22,29 @@ CORS(app)
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'finance.db')
+# On Vercel/serverless, only /tmp is writable. Use /tmp on read-only filesystems.
+IS_SERVERLESS = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
+if IS_SERVERLESS:
+    DB_PATH = '/tmp/finance.db'
+    UPLOAD_FOLDER = '/tmp/uploads'
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+else:
+    DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'finance.db')
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
+
+# Seed data for fresh deployments (so demo always has data)
+SEED_INVOICES = [
+    {'invoice_no':'INV-2026-001','vendor':'Notion Labs Inc','amount':500000,'currency':'IDR','issue_date':'2026-05-01','due_date':'2026-05-15','category':'Software','status':'paid','description':'Team workspace subscription'},
+    {'invoice_no':'INV-2026-002','vendor':'Google Workspace','amount':1200000,'currency':'IDR','issue_date':'2026-05-03','due_date':'2026-05-25','category':'Software','status':'paid','description':'Business Standard plan'},
+    {'invoice_no':'INV-2026-003','vendor':'Tokopedia Office','amount':250000,'currency':'IDR','issue_date':'2026-05-05','due_date':'2026-05-20','category':'Office Supplies','status':'paid','description':'Stationery and printer ink'},
+    {'invoice_no':'INV-2026-004','vendor':'Grab Business','amount':350000,'currency':'IDR','issue_date':'2026-05-10','due_date':'2026-05-22','category':'Travel','status':'unpaid','description':'Client meeting transport'},
+    {'invoice_no':'INV-2026-005','vendor':'PLN Persero','amount':800000,'currency':'IDR','issue_date':'2026-05-12','due_date':'2026-05-23','category':'Utilities','status':'unpaid','description':'May electricity bill'},
+    {'invoice_no':'INV-2026-006','vendor':'Facebook Ads','amount':2000000,'currency':'IDR','issue_date':'2026-05-15','due_date':'2026-05-30','category':'Marketing','status':'unpaid','description':'Q2 campaign boost'},
+    {'invoice_no':'INV-2026-007','vendor':'Freelance Designer','amount':1500000,'currency':'IDR','issue_date':'2026-05-18','due_date':'2026-06-01','category':'Services','status':'unpaid','description':'Logo redesign project'},
+    {'invoice_no':'INV-2026-008','vendor':'Indihome Telkom','amount':450000,'currency':'IDR','issue_date':'2026-04-25','due_date':'2026-05-10','category':'Utilities','status':'overdue','description':'Office internet April'},
+    {'invoice_no':'INV-2026-009','vendor':'AWS Cloud','amount':3200000,'currency':'IDR','issue_date':'2026-05-08','due_date':'2026-05-28','category':'Software','status':'unpaid','description':'EC2 + S3 monthly'},
+    {'invoice_no':'INV-2026-010','vendor':'Canva Pro','amount':180000,'currency':'IDR','issue_date':'2026-05-02','due_date':'2026-05-17','category':'Software','status':'paid','description':'Pro team license'},
+]
 
 # ─── DB ───────────────────────────────────────────────────────────────────────
 
@@ -68,6 +89,16 @@ def init_db():
             created_at  TEXT DEFAULT (datetime('now'))
         );
     ''')
+    # Seed demo data only if empty
+    count = db.execute('SELECT COUNT(*) FROM invoices').fetchone()[0]
+    if count == 0:
+        for s in SEED_INVOICES:
+            db.execute(
+                '''INSERT INTO invoices (invoice_no, vendor, amount, currency, issue_date, due_date, status, category, description)
+                   VALUES (?,?,?,?,?,?,?,?,?)''',
+                (s['invoice_no'], s['vendor'], s['amount'], s['currency'],
+                 s['issue_date'], s['due_date'], s['status'], s['category'], s['description'])
+            )
     db.commit()
     db.close()
 
