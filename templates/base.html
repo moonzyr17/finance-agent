@@ -297,13 +297,62 @@
     [data-theme="light"] .glass-dark {
       box-shadow: 0 1px 3px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.06);
     }
+    /* Sidebar responsive */
+    aside.sidebar {
+      transition: transform 250ms cubic-bezier(0.4,0,0.2,1);
+    }
+    @media (max-width: 1023px) {
+      aside.sidebar {
+        transform: translateX(-100%);
+      }
+      aside.sidebar.open {
+        transform: translateX(0);
+        box-shadow: 0 0 60px rgba(0,0,0,0.4);
+      }
+      main.content {
+        margin-left: 0 !important;
+      }
+      .sidebar-overlay {
+        position: fixed; inset: 0;
+        background: rgba(2,6,23,0.6);
+        backdrop-filter: blur(4px);
+        z-index: 25;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 200ms;
+      }
+      .sidebar-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      [data-theme="light"] .sidebar-overlay {
+        background: rgba(15,23,42,0.4);
+      }
+    }
+    @media (min-width: 1024px) {
+      .sidebar-overlay, .menu-btn { display: none !important; }
+    }
+    .menu-btn {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: var(--glass-shine);
+      border: 1px solid var(--border-hi);
+      color: var(--fore);
+      cursor: pointer;
+      transition: all 200ms;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .menu-btn:hover { border-color: var(--accent); }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body class="font-sans min-h-screen">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
   <div class="relative z-10 flex min-h-screen">
     <!-- Sidebar -->
-    <aside class="w-64 fixed top-0 left-0 h-full z-30 glass-dark border-r border-border flex flex-col">
+    <aside id="sidebar" class="sidebar w-64 fixed top-0 left-0 h-full z-30 glass-dark border-r border-border flex flex-col">
       <div class="px-6 py-5 border-b border-border">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center shadow-lg" style="background:linear-gradient(135deg,var(--accent),var(--blue));box-shadow:0 4px 14px var(--glow1);">
@@ -347,23 +396,28 @@
       </div>
     </aside>
 
-    <main class="ml-64 flex-1 min-h-screen relative">
-      <header class="sticky top-0 z-20 glass-dark border-b border-border px-8 py-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-[10px] mono text-foreDim2 uppercase tracking-wider">{% block breadcrumb %}Dashboard{% endblock %}</span>
+    <main class="content ml-64 flex-1 min-h-screen relative">
+      <header class="sticky top-0 z-20 glass-dark border-b border-border px-4 sm:px-8 py-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <button class="menu-btn" onclick="openSidebar()" aria-label="Open menu">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-[10px] mono text-foreDim2 uppercase tracking-wider truncate">{% block breadcrumb %}Dashboard{% endblock %}</span>
+              </div>
+              <h1 class="text-lg sm:text-xl font-semibold text-fore tracking-tight truncate">{% block page_title %}Overview{% endblock %}</h1>
             </div>
-            <h1 class="text-xl font-semibold text-fore tracking-tight">{% block page_title %}Overview{% endblock %}</h1>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 sm:gap-3 shrink-0">
             <div id="reminder-badge" class="hidden">
-              <span class="inline-flex items-center gap-2 status-overdue text-xs font-medium px-3 py-1.5 rounded-full">
+              <span class="inline-flex items-center gap-2 status-overdue text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd"/></svg>
                 <span id="reminder-text">0 due</span>
               </span>
             </div>
-            <div class="text-xs text-foreDim2 mono hidden sm:block" id="current-date"></div>
+            <div class="text-xs text-foreDim2 mono hidden lg:block" id="current-date"></div>
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
               <svg class="icon-sun w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
               <svg class="icon-moon w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -372,13 +426,21 @@
         </div>
       </header>
 
-      <div class="p-8 slide-up">
+      <div class="p-4 sm:p-8 slide-up">
         {% block content %}{% endblock %}
       </div>
     </main>
   </div>
 
   <script>
+    function openSidebar(){
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('sidebar-overlay').classList.add('open');
+    }
+    function closeSidebar(){
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('open');
+    }
     function toggleTheme(){
       const cur = document.documentElement.getAttribute('data-theme');
       const next = cur === 'dark' ? 'light' : 'dark';
