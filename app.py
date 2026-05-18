@@ -20,16 +20,20 @@ app = Flask(__name__)
 CORS(app)
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # On Vercel/serverless, only /tmp is writable. Use /tmp on read-only filesystems.
 IS_SERVERLESS = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'))
 if IS_SERVERLESS:
     DB_PATH = '/tmp/finance.db'
     UPLOAD_FOLDER = '/tmp/uploads'
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 else:
     DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'finance.db')
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except OSError:
+    pass
+
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
 
 # Seed data for fresh deployments (so demo always has data)
@@ -61,7 +65,10 @@ def close_db(e=None):
         db.close()
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    try:
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    except OSError:
+        pass
     db = sqlite3.connect(DB_PATH)
     db.executescript('''
         CREATE TABLE IF NOT EXISTS invoices (
