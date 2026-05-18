@@ -304,18 +304,24 @@
     @media (max-width: 1023px) {
       aside.sidebar {
         transform: translateX(-100%);
+        /* Solid background on mobile — avoid backdrop-filter stacking blur artifacts */
+        background: #0b1220 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+      [data-theme="light"] aside.sidebar {
+        background: #ffffff !important;
       }
       aside.sidebar.open {
         transform: translateX(0);
-        box-shadow: 0 0 60px rgba(0,0,0,0.4);
+        box-shadow: 0 0 60px rgba(0,0,0,0.5);
       }
       main.content {
         margin-left: 0 !important;
       }
       .sidebar-overlay {
         position: fixed; inset: 0;
-        background: rgba(2,6,23,0.6);
-        backdrop-filter: blur(4px);
+        background: rgba(2,6,23,0.65);
         z-index: 25;
         opacity: 0;
         pointer-events: none;
@@ -326,7 +332,7 @@
         pointer-events: auto;
       }
       [data-theme="light"] .sidebar-overlay {
-        background: rgba(15,23,42,0.4);
+        background: rgba(15,23,42,0.45);
       }
     }
     @media (min-width: 1024px) {
