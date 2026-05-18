@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Finance Agent{% endblock %}</title>
+  <script>
+    // Apply theme before render to prevent flash
+    (function(){
+      const t = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: ['class', '[data-theme="dark"]'],
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* ─── DARK THEME (default) ───────────────────────────────────── */
+    [data-theme="dark"] {
+      --bg:        #020617;
+      --surface:   rgba(15,23,42,0.55);
+      --surface2:  rgba(15,23,42,0.75);
+      --surface3:  rgba(2,6,23,0.7);
+      --bg-soft:   rgba(2,6,23,0.4);
+      --border:    rgba(148,163,184,0.12);
+      --border-hi: rgba(148,163,184,0.22);
+      --fore:      #F8FAFC;
+      --fore-dim:  #94A3B8;
+      --fore-dim2: #64748B;
+      --accent:    #22C55E;
+      --accent-hi: #16A34A;
+      --warn:      #F59E0B;
+      --danger:    #EF4444;
+      --blue:      #3B82F6;
+      --purple:    #A855F7;
+      --pink:      #EC4899;
+      --teal:      #14B8A6;
+      --input-bg:  rgba(2,6,23,0.6);
+      --shadow:    0 4px 14px rgba(34,197,94,0.25);
+      --shadow-hi: 0 6px 20px rgba(34,197,94,0.35);
+      --glow1:     rgba(34,197,94,0.15);
+      --glow2:     rgba(59,130,246,0.12);
+      --glass-shine: rgba(255,255,255,0.06);
+    }
+
+    /* ─── LIGHT THEME ────────────────────────────────────────────── */
+    [data-theme="light"] {
+      --bg:        #F8FAFC;
+      --surface:   rgba(255,255,255,0.65);
+      --surface2:  rgba(255,255,255,0.85);
+      --surface3:  rgba(255,255,255,0.75);
+      --bg-soft:   rgba(241,245,249,0.6);
+      --border:    rgba(15,23,42,0.08);
+      --border-hi: rgba(15,23,42,0.15);
+      --fore:      #0F172A;
+      --fore-dim:  #475569;
+      --fore-dim2: #94A3B8;
+      --accent:    #16A34A;
+      --accent-hi: #15803D;
+      --warn:      #D97706;
+      --danger:    #DC2626;
+      --blue:      #2563EB;
+      --purple:    #9333EA;
+      --pink:      #DB2777;
+      --teal:      #0D9488;
+      --input-bg:  rgba(255,255,255,0.8);
+      --shadow:    0 4px 14px rgba(22,163,74,0.18);
+      --shadow-hi: 0 6px 20px rgba(22,163,74,0.28);
+      --glow1:     rgba(22,163,74,0.10);
+      --glow2:     rgba(37,99,235,0.08);
+      --glass-shine: rgba(15,23,42,0.04);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fore);
+      font-feature-settings: 'cv02','cv03','cv04','cv11';
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      transition: background 300ms ease, color 300ms ease;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: 'zero'; }
+
+    /* Tailwind color utilities mapped to vars */
+    .text-fore     { color: var(--fore); }
+    .text-foreDim  { color: var(--fore-dim); }
+    .text-foreDim2 { color: var(--fore-dim2); }
+    .text-accent   { color: var(--accent); }
+    .text-accentHi { color: var(--accent-hi); }
+    .text-warn     { color: var(--warn); }
+    .text-danger   { color: var(--danger); }
+    .text-blue     { color: var(--blue); }
+    .text-bg       { color: var(--bg); }
+    .bg-bg         { background: var(--bg); }
+    .bg-bgSoft     { background: var(--bg-soft); }
+    .bg-accent     { background: var(--accent); }
+    .bg-warn       { background: var(--warn); }
+    .bg-danger     { background: var(--danger); }
+    .bg-blue       { background: var(--blue); }
+    .border-border { border-color: var(--border); }
+    .divide-border > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
+
+    /* Ambient glow */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+      transition: opacity 300ms ease;
+    }
+    body::before {
+      top: -10%; left: -10%;
+      background: radial-gradient(circle, var(--glow1) 0%, transparent 70%);
+    }
+    body::after {
+      bottom: -20%; right: -10%;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, var(--glow2) 0%, transparent 70%);
+    }
+
+    /* Glass cards */
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .glass-strong {
+      background: var(--surface2);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border-hi);
+      border-radius: 16px;
+    }
+    .glass-dark {
+      background: var(--surface3);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+    }
+
+    /* Sidebar nav */
+    .nav-link {
+      position: relative;
+      color: var(--fore-dim);
+      transition: all 200ms cubic-bezier(0.4,0,0.2,1);
+    }
+    .nav-link:hover { background: var(--glass-shine); color: var(--fore); }
+    .nav-link.active {
+      background: linear-gradient(135deg, var(--glow1), transparent);
+      color: var(--accent);
+      border-left: 2px solid var(--accent);
+    }
+    .nav-link.active svg { color: var(--accent); }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-hi));
+      color: white;
+      font-weight: 600;
+      transition: all 200ms;
+      box-shadow: var(--shadow);
+    }
+    [data-theme="dark"] .btn-primary { color: var(--bg); }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-hi);
+    }
+    .btn-secondary {
+      background: var(--glass-shine);
+      color: var(--fore);
+      border: 1px solid var(--border-hi);
+      transition: all 200ms;
+    }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-danger {
+      background: rgba(239,68,68,0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    /* Inputs */
+    input, select, textarea {
+      background: var(--input-bg) !important;
+      border: 1px solid var(--border-hi) !important;
+      color: var(--fore) !important;
+      transition: all 200ms;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px var(--glow1) !important;
+    }
+    input::placeholder { color: var(--fore-dim2); }
+    [data-theme="dark"] select option { background: #0F172A; color: #F8FAFC; }
+    [data-theme="light"] select option { background: #FFFFFF; color: #0F172A; }
+
+    /* Status pills */
+    .status-paid {
+      background: rgba(34,197,94,0.12); color: var(--accent);
+      border: 1px solid rgba(34,197,94,0.25);
+    }
+    .status-unpaid {
+      background: rgba(245,158,11,0.12); color: var(--warn);
+      border: 1px solid rgba(245,158,11,0.25);
+    }
+    .status-overdue {
+      background: rgba(239,68,68,0.12); color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+    [data-theme="light"] .status-paid    { background: rgba(22,163,74,0.10); }
+    [data-theme="light"] .status-unpaid  { background: rgba(217,119,6,0.10); }
+    [data-theme="light"] .status-overdue { background: rgba(220,38,38,0.10); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--fore-dim2); }
+
+    /* Animations */
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.95); }
+    }
+    .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .slide-up { animation: slideUp 400ms cubic-bezier(0.4,0,0.2,1); }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--blue) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Table */
+    table th { font-weight: 500; color: var(--fore-dim2); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+    tbody tr { transition: background 150ms; }
+    tbody tr:hover { background: var(--glass-shine); }
+
+    /* Modal backdrop */
+    .modal-backdrop {
+      background: rgba(2,6,23,0.85);
+      backdrop-filter: blur(8px);
+    }
+    [data-theme="light"] .modal-backdrop { background: rgba(15,23,42,0.45); }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: var(--glass-shine);
+      border: 1px solid var(--border-hi);
+      color: var(--fore-dim);
+      cursor: pointer;
+      transition: all 200ms;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-toggle:hover { color: var(--fore); border-color: var(--accent); transform: rotate(15deg); }
+    [data-theme="dark"] .icon-sun  { display: block; }
+    [data-theme="dark"] .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun  { display: none; }
+    [data-theme="light"] .icon-moon { display: block; }
+
+    /* Soft shadows on cards in light mode for definition */
+    [data-theme="light"] .glass,
+    [data-theme="light"] .glass-strong,
+    [data-theme="light"] .glass-dark {
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.06);
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="font-sans min-h-screen">
+  <div class="relative z-10 flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 fixed top-0 left-0 h-full z-30 glass-dark border-r border-border flex flex-col">
+      <div class="px-6 py-5 border-b border-border">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shadow-lg" style="background:linear-gradient(135deg,var(--accent),var(--blue));box-shadow:0 4px 14px var(--glow1);">
+            <svg class="w-5 h-5" style="color:white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg>
+          </div>
+          <div>
+            <div class="font-semibold text-sm text-fore tracking-tight">Finance Agent</div>
+            <div class="text-[10px] text-foreDim2 mono mt-0.5">v1.0 · OFFICE OPS</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="flex-1 px-3 py-5 space-y-0.5">
+        <div class="px-3 mb-2 text-[10px] mono text-foreDim2 uppercase tracking-wider">Main</div>
+        <a href="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if request.path == '/' %}active{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Overview
+        </a>
+        <a href="/invoices" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if request.path == '/invoices' %}active{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Invoices
+        </a>
+        <a href="/reconcile" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if request.path == '/reconcile' %}active{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          Reconcile
+        </a>
+        <a href="/reports" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if request.path == '/reports' %}active{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Reports
+        </a>
+      </nav>
+
+      <div class="px-4 py-4 border-t border-border">
+        <div class="glass rounded-xl px-3 py-2.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-accent pulse-dot"></span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] font-medium text-fore">AI Engine</div>
+            <div class="text-[10px] text-foreDim2 mono">gemini-2.5-flash</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="ml-64 flex-1 min-h-screen relative">
+      <header class="sticky top-0 z-20 glass-dark border-b border-border px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-[10px] mono text-foreDim2 uppercase tracking-wider">{% block breadcrumb %}Dashboard{% endblock %}</span>
+            </div>
+            <h1 class="text-xl font-semibold text-fore tracking-tight">{% block page_title %}Overview{% endblock %}</h1>
+          </div>
+          <div class="flex items-center gap-3">
+            <div id="reminder-badge" class="hidden">
+              <span class="inline-flex items-center gap-2 status-overdue text-xs font-medium px-3 py-1.5 rounded-full">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd"/></svg>
+                <span id="reminder-text">0 due</span>
+              </span>
+            </div>
+            <div class="text-xs text-foreDim2 mono hidden sm:block" id="current-date"></div>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+              <svg class="icon-sun w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+              <svg class="icon-moon w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="p-8 slide-up">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function toggleTheme(){
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      window.dispatchEvent(new CustomEvent('themechange', {detail:{theme:next}}));
+    }
+
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-GB', {weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+    fetch('/api/reminders').then(r=>r.json()).then(data=>{
+      if(data.length > 0){
+        document.getElementById('reminder-badge').classList.remove('hidden');
+        document.getElementById('reminder-text').textContent = `${data.length} due soon`;
+      }
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

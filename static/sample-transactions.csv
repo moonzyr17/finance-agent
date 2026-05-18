@@ -1,0 +1,8 @@
+date,description,amount,type,reference
+2026-05-01,Payment to Notion Inc,500000,debit,TRX-001
+2026-05-03,Office supplies Tokopedia,250000,debit,TRX-002
+2026-05-05,Google Workspace subscription,1200000,debit,TRX-003
+2026-05-10,Grab Business travel,350000,debit,TRX-004
+2026-05-12,Electricity bill PLN,800000,debit,TRX-005
+2026-05-15,Facebook Ads payment,2000000,debit,TRX-006
+2026-05-18,Freelancer payment,1500000,debit,TRX-007

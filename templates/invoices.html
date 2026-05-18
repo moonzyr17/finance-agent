@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block title %}Invoices — Finance Agent{% endblock %}
+{% block breadcrumb %}Main / Invoices{% endblock %}
+{% block page_title %}Invoice Management{% endblock %}
+
+{% block content %}
+<!-- Toolbar -->
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <div class="relative flex-1 min-w-48">
+    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreDim2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <input id="search" type="text" placeholder="Search vendor or invoice number..." class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm" />
+  </div>
+  <select id="filter-status" class="px-4 py-2.5 rounded-xl text-sm cursor-pointer mono uppercase">
+    <option value="">All Status</option>
+    <option value="unpaid">Unpaid</option>
+    <option value="paid">Paid</option>
+    <option value="overdue">Overdue</option>
+  </select>
+  <button onclick="openScanModal()" class="btn-primary px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+    AI Scan
+  </button>
+  <button onclick="openManualModal()" class="btn-secondary px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+    Manual
+  </button>
+</div>
+
+<!-- Table -->
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-bg/40">
+        <tr>
+          <th class="text-left px-6 py-4">Invoice</th>
+          <th class="text-left px-6 py-4">Vendor</th>
+          <th class="text-left px-6 py-4">Category</th>
+          <th class="text-left px-6 py-4">Due Date</th>
+          <th class="text-right px-6 py-4">Amount</th>
+          <th class="text-center px-6 py-4">Status</th>
+          <th class="text-center px-6 py-4 w-16"></th>
+        </tr>
+      </thead>
+      <tbody id="invoice-tbody" class="divide-y divide-border">
+        <tr><td colspan="7" class="py-12 text-center text-foreDim2 text-xs mono uppercase tracking-wider">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Scan Modal -->
+<div id="scan-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+  <div class="glass-strong w-full max-w-lg rounded-2xl shadow-2xl">
+    <div class="flex items-center justify-between px-6 py-5 border-b border-border">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-accent/15 flex items-center justify-center">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+        <div>
+          <div class="text-base font-semibold text-fore">AI Invoice Scan</div>
+          <div class="text-[10px] mono text-foreDim2 uppercase tracking-wider">Powered by Gemini Flash</div>
+        </div>
+      </div>
+      <button onclick="closeScanModal()" class="text-foreDim2 hover:text-fore cursor-pointer transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div id="drop-zone" class="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-accent transition-all bg-bg/30 hover:bg-bg/50"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('border-accent')"
+           ondragleave="this.classList.remove('border-accent')"
+           ondrop="handleDrop(event)">
+        <div class="w-12 h-12 mx-auto rounded-xl bg-accent/10 flex items-center justify-center mb-3">
+          <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+        <p class="text-sm text-fore">Drop invoice image or <span class="text-accent font-medium cursor-pointer">browse files</span></p>
+        <p class="text-[10px] mono text-foreDim2 mt-1 uppercase tracking-wider">JPG · PNG · WEBP</p>
+      </div>
+      <input id="file-input" type="file" accept="image/*" class="hidden" onchange="handleFileSelect(event)" />
+      <div id="preview-wrap" class="hidden">
+        <img id="preview-img" class="w-full max-h-48 object-contain rounded-xl border border-border bg-bg" />
+      </div>
+      <div id="scan-status" class="hidden text-xs text-center py-3 text-accent mono uppercase tracking-wider">
+        <svg class="w-4 h-4 inline animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+        Analyzing with AI...
+      </div>
+      <div id="scan-error" class="hidden text-xs text-danger bg-danger/10 border border-danger/25 rounded-xl px-4 py-3"></div>
+
+      <div id="parsed-form" class="hidden space-y-3">
+        <div class="text-xs text-accent flex items-center gap-2 bg-accent/5 border border-accent/15 rounded-lg px-3 py-2">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          AI extracted — review before saving
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Invoice No</label>
+            <input id="p-invoice-no" type="text" class="w-full px-3 py-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Vendor</label>
+            <input id="p-vendor" type="text" class="w-full px-3 py-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Amount</label>
+            <input id="p-amount" type="number" class="w-full px-3 py-2 rounded-lg text-sm mono" />
+          </div>
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Currency</label>
+            <input id="p-currency" type="text" class="w-full px-3 py-2 rounded-lg text-sm mono" />
+          </div>
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Issue Date</label>
+            <input id="p-issue-date" type="date" class="w-full px-3 py-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Due Date</label>
+            <input id="p-due-date" type="date" class="w-full px-3 py-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Category</label>
+            <select id="p-category" class="w-full px-3 py-2 rounded-lg text-sm cursor-pointer">
+              <option>Software</option><option>Office Supplies</option><option>Travel</option>
+              <option>Marketing</option><option>Utilities</option><option>Services</option><option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Status</label>
+            <select id="p-status" class="w-full px-3 py-2 rounded-lg text-sm cursor-pointer">
+              <option value="unpaid">Unpaid</option><option value="paid">Paid</option><option value="overdue">Overdue</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Description</label>
+          <textarea id="p-description" rows="2" class="w-full px-3 py-2 rounded-lg text-sm resize-none"></textarea>
+        </div>
+        <button onclick="saveScanned()" class="w-full btn-primary py-3 rounded-xl text-sm cursor-pointer">Save Invoice</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manual Modal -->
+<div id="manual-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+  <div class="glass-strong w-full max-w-lg rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-5 border-b border-border sticky top-0 glass-strong z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-blue/15 flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        </div>
+        <div>
+          <div class="text-base font-semibold text-fore">Add Invoice</div>
+          <div class="text-[10px] mono text-foreDim2 uppercase tracking-wider">Manual entry</div>
+        </div>
+      </div>
+      <button onclick="closeManualModal()" class="text-foreDim2 hover:text-fore cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="p-6 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Invoice No</label><input id="m-invoice-no" type="text" class="w-full px-3 py-2 rounded-lg text-sm" /></div>
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Vendor *</label><input id="m-vendor" type="text" class="w-full px-3 py-2 rounded-lg text-sm" /></div>
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Amount *</label><input id="m-amount" type="number" class="w-full px-3 py-2 rounded-lg text-sm mono" /></div>
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Currency</label><input id="m-currency" type="text" value="IDR" class="w-full px-3 py-2 rounded-lg text-sm mono" /></div>
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Issue Date</label><input id="m-issue-date" type="date" class="w-full px-3 py-2 rounded-lg text-sm" /></div>
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Due Date</label><input id="m-due-date" type="date" class="w-full px-3 py-2 rounded-lg text-sm" /></div>
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Category</label><select id="m-category" class="w-full px-3 py-2 rounded-lg text-sm cursor-pointer"><option>Software</option><option>Office Supplies</option><option>Travel</option><option>Marketing</option><option>Utilities</option><option>Services</option><option>Other</option></select></div>
+        <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Status</label><select id="m-status" class="w-full px-3 py-2 rounded-lg text-sm cursor-pointer"><option value="unpaid">Unpaid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div>
+      </div>
+      <div><label class="text-[10px] mono text-foreDim2 uppercase tracking-wider mb-1.5 block">Description</label><textarea id="m-description" rows="2" class="w-full px-3 py-2 rounded-lg text-sm resize-none"></textarea></div>
+      <button onclick="saveManual()" class="w-full btn-primary py-3 rounded-xl text-sm cursor-pointer">Save Invoice</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const fmt = n => 'Rp ' + (n||0).toLocaleString('id-ID');
+let allInvoices = [];
+
+function loadInvoices(){
+  fetch('/api/invoices').then(r=>r.json()).then(data=>{ allInvoices = data; renderTable(data); });
+}
+
+function renderTable(data){
+  const tbody = document.getElementById('invoice-tbody');
+  if(!data.length){
+    tbody.innerHTML = `<tr><td colspan="7" class="py-16 text-center">
+      <div class="flex flex-col items-center justify-center">
+        <div class="w-12 h-12 rounded-full bg-bg border border-border flex items-center justify-center mb-3">
+          <svg class="w-6 h-6 text-foreDim2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <div class="text-sm text-fore mb-1">No invoices found</div>
+        <div class="text-[10px] mono text-foreDim2 uppercase tracking-wider">Try AI Scan or Manual entry</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(inv=>`
+    <tr>
+      <td class="px-6 py-4 mono text-xs text-foreDim">${inv.invoice_no||'—'}</td>
+      <td class="px-6 py-4 font-medium">${inv.vendor||'—'}</td>
+      <td class="px-6 py-4 text-foreDim text-xs">${inv.category||'—'}</td>
+      <td class="px-6 py-4 mono text-xs text-foreDim">${inv.due_date||'—'}</td>
+      <td class="px-6 py-4 text-right mono text-sm font-semibold">${fmt(inv.amount)}</td>
+      <td class="px-6 py-4 text-center">
+        <select onchange="updateStatus(${inv.id}, this.value)" class="status-${inv.status} text-[10px] mono uppercase tracking-wider font-medium px-3 py-1 rounded-full cursor-pointer">
+          <option value="unpaid" ${inv.status==='unpaid'?'selected':''}>unpaid</option>
+          <option value="paid"   ${inv.status==='paid'?'selected':''}>paid</option>
+          <option value="overdue"${inv.status==='overdue'?'selected':''}>overdue</option>
+        </select>
+      </td>
+      <td class="px-6 py-4 text-center">
+        <button onclick="deleteInvoice(${inv.id})" class="text-foreDim2 hover:text-danger cursor-pointer transition-colors" title="Delete">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+document.getElementById('search').addEventListener('input', applyFilter);
+document.getElementById('filter-status').addEventListener('change', applyFilter);
+function applyFilter(){
+  const q = document.getElementById('search').value.toLowerCase();
+  const s = document.getElementById('filter-status').value;
+  renderTable(allInvoices.filter(inv=>{
+    const matchQ = !q || (inv.vendor||'').toLowerCase().includes(q) || (inv.invoice_no||'').toLowerCase().includes(q);
+    const matchS = !s || inv.status === s;
+    return matchQ && matchS;
+  }));
+}
+
+function updateStatus(id, status){
+  fetch(`/api/invoices/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status})}).then(()=>loadInvoices());
+}
+function deleteInvoice(id){
+  if(!confirm('Delete this invoice?')) return;
+  fetch(`/api/invoices/${id}`, {method:'DELETE'}).then(()=>loadInvoices());
+}
+
+function openScanModal(){ document.getElementById('scan-modal').classList.remove('hidden'); }
+function closeScanModal(){
+  document.getElementById('scan-modal').classList.add('hidden');
+  document.getElementById('parsed-form').classList.add('hidden');
+  document.getElementById('preview-wrap').classList.add('hidden');
+  document.getElementById('scan-error').classList.add('hidden');
+  document.getElementById('file-input').value='';
+}
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('border-accent');
+  if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+}
+function handleFileSelect(e){ if(e.target.files[0]) processFile(e.target.files[0]); }
+
+function processFile(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('preview-wrap').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+  scanFile(file);
+}
+
+function scanFile(file){
+  document.getElementById('scan-status').classList.remove('hidden');
+  document.getElementById('scan-error').classList.add('hidden');
+  document.getElementById('parsed-form').classList.add('hidden');
+  const fd = new FormData(); fd.append('file', file);
+  fetch('/api/scan', {method:'POST', body:fd}).then(r=>r.json()).then(d=>{
+    document.getElementById('scan-status').classList.add('hidden');
+    if(d.error){ document.getElementById('scan-error').textContent=d.error; document.getElementById('scan-error').classList.remove('hidden'); return; }
+    document.getElementById('p-invoice-no').value  = d.invoice_no||'';
+    document.getElementById('p-vendor').value      = d.vendor||'';
+    document.getElementById('p-amount').value      = d.amount||'';
+    document.getElementById('p-currency').value    = d.currency||'IDR';
+    document.getElementById('p-issue-date').value  = d.issue_date||'';
+    document.getElementById('p-due-date').value    = d.due_date||'';
+    document.getElementById('p-description').value = d.description||'';
+    const catSel = document.getElementById('p-category');
+    for(let o of catSel.options) if(o.value===d.category) o.selected=true;
+    document.getElementById('parsed-form').classList.remove('hidden');
+  }).catch(()=>{ document.getElementById('scan-status').classList.add('hidden'); document.getElementById('scan-error').textContent='Network error'; document.getElementById('scan-error').classList.remove('hidden'); });
+}
+
+function saveScanned(){
+  const body = {
+    invoice_no: document.getElementById('p-invoice-no').value,
+    vendor:     document.getElementById('p-vendor').value,
+    amount:     parseFloat(document.getElementById('p-amount').value)||0,
+    currency:   document.getElementById('p-currency').value,
+    issue_date: document.getElementById('p-issue-date').value,
+    due_date:   document.getElementById('p-due-date').value,
+    category:   document.getElementById('p-category').value,
+    status:     document.getElementById('p-status').value,
+    description:document.getElementById('p-description').value,
+  };
+  fetch('/api/invoices', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}).then(()=>{ closeScanModal(); loadInvoices(); });
+}
+
+function openManualModal(){ document.getElementById('manual-modal').classList.remove('hidden'); }
+function closeManualModal(){ document.getElementById('manual-modal').classList.add('hidden'); }
+function saveManual(){
+  const body = {
+    invoice_no: document.getElementById('m-invoice-no').value,
+    vendor:     document.getElementById('m-vendor').value,
+    amount:     parseFloat(document.getElementById('m-amount').value)||0,
+    currency:   document.getElementById('m-currency').value,
+    issue_date: document.getElementById('m-issue-date').value,
+    due_date:   document.getElementById('m-due-date').value,
+    category:   document.getElementById('m-category').value,
+    status:     document.getElementById('m-status').value,
+    description:document.getElementById('m-description').value,
+  };
+  if(!body.vendor || !body.amount){ alert('Vendor and amount are required.'); return; }
+  fetch('/api/invoices', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}).then(()=>{ closeManualModal(); loadInvoices(); });
+}
+
+loadInvoices();
+</script>
+{% endblock %}
